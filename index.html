@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartSeating 席替え名人 - 演出付き</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Kiwi+Maru:wght@500;700&display=swap');
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #f1f5f9; color: #334155; }
+    .font-kiwi { font-family: 'Kiwi Maru', serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    
+    /* カードフリップ演出 */
+    .flip-card { perspective: 1000px; }
+    .flip-card-inner {
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+    .flip-card-front, .flip-card-back {
+      backface-visibility: hidden;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+    }
+    .flip-card-back { transform: rotateY(180deg); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header Section -->
+  <header class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white px-6 py-3 shadow-md flex justify-between items-center sticky top-0 z-40">
+    <div class="flex items-center space-x-3">
+      <div class="bg-white/20 p-2 rounded-xl">
+        <i class="fa-solid fa-chair text-xl"></i>
+      </div>
+      <div class="flex items-center space-x-2">
+        <h1 class="font-bold text-lg tracking-wide">SmartSeating</h1>
+        <span class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-medium">席替え名人プレミアム</span>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="resetAll()" class="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-rotate-left"></i>
+        <span>全リセット</span>
+      </button>
+      <button onclick="startLotteryPresentation()" class="bg-amber-400 hover:bg-amber-500 text-indigo-950 font-bold text-xs px-4 py-2 rounded-lg shadow-lg transition flex items-center space-x-1.5 animate-bounce">
+        <i class="fa-solid fa-dice text-sm"></i>
+        <span>🎲 くじ引き演出で席替え！</span>
+      </button>
+      <button onclick="runShuffle(false)" class="bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-md transition flex items-center space-x-1">
+        <i class="fa-solid fa-bolt"></i>
+        <span>一括配置</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Navigation & Panels (5 cols) -->
+    <div class="lg:col-span-5 space-y-5">
+
+      <!-- Navigation Tabs -->
+      <div class="bg-white rounded-xl p-1.5 shadow-sm border border-slate-200 flex space-x-1 text-xs font-bold text-slate-500">
+        <button id="tabBtnLayout" onclick="switchTab('layout')" class="flex-1 py-2 px-3 rounded-lg bg-indigo-50 text-indigo-600 shadow-sm flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-table-cells"></i>
+          <span>1. レイアウト設定</span>
+        </button>
+        <button id="tabBtnMember" onclick="switchTab('member')" class="flex-1 py-2 px-3 rounded-lg text-slate-400 hover:text-slate-600 flex items-center justify-center space-x-1.5 transition">
+          <i class="fa-solid fa-users"></i>
+          <span>2. メンバー・固定席</span>
+        </button>
+      </div>
+
+      <!-- PANEL 1: Layout Settings -->
+      <div id="panelLayout" class="space-y-5">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+          <div class="flex items-center space-x-2 text-slate-800 font-bold text-sm border-b border-slate-100 pb-2">
+            <i class="fa-solid fa-sliders text-indigo-600"></i>
+            <span>教室レイアウト ＆ 教卓位置</span>
+          </div>
+
+          <!-- Desk Position Toggle -->
+          <div>
+            <label class="block font-bold text-xs text-slate-600 mb-1.5">教卓（黒板）の位置</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button id="deskPosTop" onclick="setDeskPosition('top')" class="p-2.5 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center justify-center space-x-1.5">
+                <i class="fa-solid fa-arrow-up"></i>
+                <span>上側が前（通常）</span>
+              </button>
+              <button id="deskPosBottom" onclick="setDeskPosition('bottom')" class="p-2.5 border border-slate-200 text-slate-500 font-bold rounded-xl flex items-center justify-center space-x-1.5 hover:bg-slate-50">
+                <i class="fa-solid fa-arrow-down"></i>
+                <span>下側が前（児童視点）</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Rows / Cols -->
+          <div class="grid grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-100">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">行数（縦）</label>
+              <select id="selectRows" onchange="updateGridDimensions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700">
+                <option value="4">4 行</option>
+                <option value="5" selected>5 行</option>
+                <option value="6">6 行</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">列数（横）</label>
+              <select id="selectCols" onchange="updateGridDimensions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700">
+                <option value="4">4 列</option>
+                <option value="5">5 列</option>
+                <option value="6" selected>6 列</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Members & Conditions -->
+      <div id="panelMember" class="space-y-5 hidden">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-user-plus text-indigo-600"></i>
+              <h2 class="font-bold text-slate-800 text-sm">メンバーリスト</h2>
+            </div>
+            <span id="memberCountBadge" class="bg-indigo-100 text-indigo-700 font-bold text-xs px-3 py-1 rounded-full">
+              0名
+            </span>
+          </div>
+
+          <!-- Bulk Import -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">
+              名前一括登録（「名前 [男/女]」の形式）
+            </label>
+            <textarea id="bulkInput" rows="4" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-slate-700" placeholder="相沢 拓海 男&#10;伊藤 葵 女&#10;井上 健太 男&#10;遠藤 桜 女"></textarea>
+            <button onclick="applyBulkImport()" class="w-full mt-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-xl transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-right-left"></i>
+              <span>名簿に反映する</span>
+            </button>
+          </div>
+
+          <!-- Member List -->
+          <div id="memberList" class="max-h-52 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Seat Canvas (7 cols) -->
+    <div id="canvasContainer" class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between space-y-6 relative overflow-hidden">
+
+      <div>
+        <!-- Legend and Dimension -->
+        <div class="flex justify-between items-center mb-6 text-xs text-slate-500 font-medium">
+          <div class="flex items-center space-x-4">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-3 rounded-sm border border-slate-300 bg-white inline-block"></span>
+              <span>通常席</span>
+            </span>
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-3 rounded-sm border border-amber-400 bg-amber-100 inline-block"></span>
+              <span>事前固定</span>
+            </span>
+          </div>
+          <div id="dimensionDisplay" class="font-bold text-slate-700">5行 × 6列</div>
+        </div>
+
+        <!-- Teacher Desk (Top View) -->
+        <div id="teacherDeskTop" class="mb-6 text-center">
+          <div class="inline-flex items-center space-x-2 bg-slate-800 text-white font-bold text-xs px-8 py-2 rounded-xl shadow-sm">
+            <i class="fa-solid fa-chalkboard"></i>
+            <span>教 卓（黒板側）</span>
+          </div>
+        </div>
+
+        <!-- Seats Grid -->
+        <div id="seatsGrid" class="grid gap-3"></div>
+
+        <!-- Teacher Desk (Bottom View) -->
+        <div id="teacherDeskBottom" class="mt-6 text-center hidden">
+          <div class="inline-flex items-center space-x-2 bg-slate-800 text-white font-bold text-xs px-8 py-2 rounded-xl shadow-sm">
+            <i class="fa-solid fa-chalkboard"></i>
+            <span>教 卓（黒板側）</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-right text-xs text-slate-400 font-medium">
+        ※ カード右上の ⚙️ アイコンを押すと、特定の児童をその席に事前固定できます
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Seat Modal for Direct Assignment -->
+  <div id="seatModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl text-xs">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-sm text-slate-800" id="modalSeatTitle">席設定</h3>
+        <button onclick="closeSeatModal()" class="text-slate-400 hover:text-slate-600 text-lg">×</button>
+      </div>
+
+      <p class="text-slate-500">この席に事前固定する児童を選択してください：</p>
+
+      <select id="modalStudentSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <!-- JSで選択肢生成 -->
+      </select>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+        <button onclick="clearFixedSeat()" class="text-red-500 hover:text-red-700 font-bold">固定を解除</button>
+        <button onclick="saveFixedSeat()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl">決定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let members = [
+      { id: 1, name: "相沢 拓海", gender: "男", present: true },
+      { id: 2, name: "伊藤 葵", gender: "女", present: true },
+      { id: 3, name: "井上 健太", gender: "男", present: true },
+      { id: 4, name: "遠藤 桜", gender: "女", present: true },
+      { id: 5, name: "太田 翼", gender: "男", present: true },
+      { id: 6, name: "金子 結衣", gender: "女", present: true }
+    ];
+
+    let rows = 5;
+    let cols = 6;
+    let deskPosition = 'top'; // 'top' or 'bottom'
+    let fixedAssignments = {}; // seatIndex -> memberId
+    let seatMap = [];
+    let selectedSeatIndex = null;
+
+    function switchTab(tab) {
+      const btnLayout = document.getElementById('tabBtnLayout');
+      const btnMember = document.getElementById('tabBtnMember');
+      const panelLayout = document.getElementById('panelLayout');
+      const panelMember = document.getElementById('panelMember');
+
+      if (tab === 'layout') {
+        btnLayout.className = "flex-1 py-2 px-3 rounded-lg bg-indigo-50 text-indigo-600 shadow-sm flex items-center justify-center space-x-1.5 transition font-bold";
+        btnMember.className = "flex-1 py-2 px-3 rounded-lg text-slate-400 hover:text-slate-600 flex items-center justify-center space-x-1.5 transition font-bold";
+        panelLayout.classList.remove('hidden');
+        panelMember.classList.add('hidden');
+      } else {
+        btnMember.className = "flex-1 py-2 px-3 rounded-lg bg-indigo-50 text-indigo-600 shadow-sm flex items-center justify-center space-x-1.5 transition font-bold";
+        btnLayout.className = "flex-1 py-2 px-3 rounded-lg text-slate-400 hover:text-slate-600 flex items-center justify-center space-x-1.5 transition font-bold";
+        panelMember.classList.remove('hidden');
+        panelLayout.classList.add('hidden');
+      }
+    }
+
+    function setDeskPosition(pos) {
+      deskPosition = pos;
+      const btnTop = document.getElementById('deskPosTop');
+      const btnBottom = document.getElementById('deskPosBottom');
+      const deskTop = document.getElementById('teacherDeskTop');
+      const deskBottom = document.getElementById('teacherDeskBottom');
+
+      if (pos === 'top') {
+        btnTop.className = "p-2.5 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center justify-center space-x-1.5";
+        btnBottom.className = "p-2.5 border border-slate-200 text-slate-500 font-bold rounded-xl flex items-center justify-center space-x-1.5 hover:bg-slate-50";
+        deskTop.classList.remove('hidden');
+        deskBottom.classList.add('hidden');
+      } else {
+        btnBottom.className = "p-2.5 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center justify-center space-x-1.5";
+        btnTop.className = "p-2.5 border border-slate-200 text-slate-500 font-bold rounded-xl flex items-center justify-center space-x-1.5 hover:bg-slate-50";
+        deskBottom.classList.remove('hidden');
+        deskTop.classList.add('hidden');
+      }
+    }
+
+    function updateGridDimensions() {
+      rows = parseInt(document.getElementById('selectRows').value);
+      cols = parseInt(document.getElementById('selectCols').value);
+      document.getElementById('dimensionDisplay').innerText = `${rows}行 × ${cols}列`;
+      seatMap = new Array(rows * cols).fill(null);
+      renderGrid();
+    }
+
+    function renderMemberList() {
+      const container = document.getElementById('memberList');
+      container.innerHTML = '';
+      document.getElementById('memberCountBadge').innerText = `${members.length}名`;
+
+      members.forEach((m, idx) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs";
+        const isMale = m.gender === "男";
+
+        item.innerHTML = `
+          <div class="flex items-center">
+            <span class="font-bold text-slate-700">${m.name}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ml-2 ${isMale ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}">${m.gender}</span>
+          </div>
+          <button onclick="togglePresent(${idx})" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${m.present ? 'bg-white text-slate-600 border border-slate-200 shadow-sm' : 'bg-slate-200 text-slate-400'}">
+            ${m.present ? '出席' : '欠席'}
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('seatsGrid');
+      grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+      grid.innerHTML = '';
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const index = r * cols + c;
+          const assignedMember = seatMap[index];
+          const fixedMemberId = fixedAssignments[index];
+          const fixedMember = members.find(m => m.id === fixedMemberId);
+
+          const card = document.createElement('div');
+          const label = `${r + 1}-${c + 1}`;
+
+          if (assignedMember) {
+            const isFixed = fixedMemberId === assignedMember.id;
+            card.className = `border-2 rounded-xl p-2.5 h-20 flex flex-col justify-between relative shadow-sm transition ${isFixed ? 'bg-amber-50/80 border-amber-400' : 'bg-indigo-50/50 border-indigo-300'}`;
+            card.innerHTML = `
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                <span>${label}</span>
+                <i onclick="openSeatModal(${index})" class="fa-solid fa-gear ${isFixed ? 'text-amber-500 font-bold' : 'text-slate-300'} hover:text-indigo-600 cursor-pointer"></i>
+              </div>
+              <div class="font-bold text-xs md:text-sm text-slate-800 text-center font-kiwi">${assignedMember.name}</div>
+              <div class="text-[9px] text-center ${assignedMember.gender === '男' ? 'text-blue-600' : 'text-pink-600'} font-bold">
+                ${isFixed ? '📌 事前固定' : assignedMember.gender}
+              </div>
+            `;
+          } else if (fixedMember) {
+            card.className = "bg-amber-50/80 border-2 border-amber-400 rounded-xl p-2.5 h-20 flex flex-col justify-between relative shadow-sm";
+            card.innerHTML = `
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                <span>${label}</span>
+                <i onclick="openSeatModal(${index})" class="fa-solid fa-gear text-amber-500 cursor-pointer"></i>
+              </div>
+              <div class="font-bold text-xs text-amber-800 text-center font-kiwi">${fixedMember.name}</div>
+              <div class="text-[9px] text-center text-amber-600 font-bold">📌 固定予約中</div>
+            `;
+          } else {
+            card.className = "bg-white border border-slate-200 rounded-xl p-2.5 h-20 flex flex-col justify-between relative shadow-sm hover:border-indigo-300 transition";
+            card.innerHTML = `
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                <span>${label}</span>
+                <i onclick="openSeatModal(${index})" class="fa-solid fa-gear text-slate-300 hover:text-slate-500 cursor-pointer"></i>
+              </div>
+              <div class="font-bold text-xs text-slate-400 text-center my-auto">通常席</div>
+            `;
+          }
+          grid.appendChild(card);
+        }
+      }
+    }
+
+    // 特定の席の固定ダイアログ
+    function openSeatModal(index) {
+      selectedSeatIndex = index;
+      const r = Math.floor(index / cols) + 1;
+      const c = (index % cols) + 1;
+      document.getElementById('modalSeatTitle').innerText = `席 ${r}行 - ${c}列 の事前指定`;
+
+      const select = document.getElementById('modalStudentSelect');
+      select.innerHTML = '<option value="">(指定なし - 通常シャッフル)</option>';
+
+      members.forEach(m => {
+        const isAlreadyFixed = Object.values(fixedAssignments).includes(m.id) && fixedAssignments[index] !== m.id;
+        if (!isAlreadyFixed) {
+          const selected = fixedAssignments[index] === m.id ? 'selected' : '';
+          select.innerHTML += `<option value="${m.id}" ${selected}>${m.name} (${m.gender})</option>`;
+        }
+      });
+
+      document.getElementById('seatModal').classList.remove('hidden');
+    }
+
+    function closeSeatModal() {
+      document.getElementById('seatModal').classList.add('hidden');
+    }
+
+    function saveFixedSeat() {
+      const val = document.getElementById('modalStudentSelect').value;
+      if (val) {
+        fixedAssignments[selectedSeatIndex] = parseInt(val);
+      } else {
+        delete fixedAssignments[selectedSeatIndex];
+      }
+      closeSeatModal();
+      renderGrid();
+    }
+
+    function clearFixedSeat() {
+      delete fixedAssignments[selectedSeatIndex];
+      closeSeatModal();
+      renderGrid();
+    }
+
+    // シャッフル配置（内部処理）
+    function computeShuffle() {
+      seatMap = new Array(rows * cols).fill(null);
+
+      // 1. 固定席をまず埋める
+      let assignedMemberIds = [];
+      Object.keys(fixedAssignments).forEach(seatIdx => {
+        const mId = fixedAssignments[seatIdx];
+        const member = members.find(m => m.id === mId && m.present);
+        if (member) {
+          seatMap[seatIdx] = member;
+          assignedMemberIds.push(member.id);
+        }
+      });
+
+      // 2. 余ったメンバーをランダムシャッフル
+      let remaining = members.filter(m => m.present && !assignedMemberIds.includes(m.id));
+      for (let i = remaining.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+      }
+
+      // 3. 空いている席に配置
+      for (let i = 0; i < seatMap.length; i++) {
+        if (seatMap[i] === null && remaining.length > 0) {
+          seatMap[i] = remaining.pop();
+        }
+      }
+    }
+
+    function runShuffle(isPresentation = false) {
+      computeShuffle();
+      renderGrid();
+    }
+
+    // 🎲 くじ引き演出モード
+    function startLotteryPresentation() {
+      computeShuffle();
+
+      const grid = document.getElementById('seatsGrid');
+      grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+      grid.innerHTML = '';
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const index = r * cols + c;
+          const assignedMember = seatMap[index];
+          const label = `${r + 1}-${c + 1}`;
+
+          const card = document.createElement('div');
+          card.className = "h-20 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl p-2 flex flex-col justify-between items-center text-white shadow-md cursor-pointer hover:scale-105 transition duration-300";
+          card.id = `lottery-card-${index}`;
+
+          card.innerHTML = `
+            <span class="text-[10px] opacity-70 font-mono">${label}</span>
+            <span class="font-extrabold text-lg text-amber-300">❓</span>
+            <span class="text-[9px] opacity-80">めくる</span>
+          `;
+
+          card.onclick = () => revealCard(index, assignedMember);
+          grid.appendChild(card);
+        }
+      }
+    }
+
+    function revealCard(index, member) {
+      const card = document.getElementById(`lottery-card-${index}`);
+      if (!card || card.classList.contains('revealed')) return;
+
+      card.classList.add('revealed');
+      card.className = "h-20 bg-amber-100 border-2 border-amber-400 rounded-xl p-2.5 flex flex-col justify-between items-center text-slate-800 shadow-lg animate-bounce";
+
+      if (member) {
+        card.innerHTML = `
+          <span class="text-[10px] text-slate-400 font-mono">${Math.floor(index/cols)+1}-${(index%cols)+1}</span>
+          <span class="font-extrabold text-sm text-indigo-950 font-kiwi">${member.name}</span>
+          <span class="text-[9px] font-bold ${member.gender === '男' ? 'text-blue-600' : 'text-pink-600'}">${member.gender}</span>
+        `;
+      } else {
+        card.innerHTML = `
+          <span class="text-[10px] text-slate-400 font-mono">${Math.floor(index/cols)+1}-${(index%cols)+1}</span>
+          <span class="font-bold text-xs text-slate-400">空席</span>
+          <span></span>
+        `;
+      }
+    }
+
+    function applyBulkImport() {
+      const text = document.getElementById('bulkInput').value.trim();
+      if (!text) return;
+      const lines = text.split('\n');
+      const newMembers = [];
+      lines.forEach((line, i) => {
+        if (line.trim() !== "") {
+          const isFemale = line.endsWith("女");
+          const name = line.replace(/(男|女)$/, '').trim();
+          newMembers.push({ id: Date.now() + i, name: name, gender: isFemale ? "女" : "男", present: true });
+        }
+      });
+      if (newMembers.length > 0) {
+        members = newMembers;
+        fixedAssignments = {};
+        renderMemberList();
+        renderGrid();
+        alert(`${members.length}名のメンバーを反映しました！`);
+      }
+    }
+
+    function togglePresent(idx) {
+      members[idx].present = !members[idx].present;
+      renderMemberList();
+    }
+
+    function resetAll() {
+      fixedAssignments = {};
+      seatMap = new Array(rows * cols).fill(null);
+      renderGrid();
+    }
+
+    window.onload = () => {
+      document.getElementById('bulkInput').value = "相沢 拓海 男\n伊藤 葵 女\n井上 健太 男\n遠藤 桜 女\n太田 翼 男\n金子 結衣 女";
+      seatMap = new Array(rows * cols).fill(null);
+      renderMemberList();
+      renderGrid();
+    };
+  </script>
+</body>
+</html>
