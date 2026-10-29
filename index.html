@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartSeating 席替え名人 - 男女交互・使用不可対応</title>
+  <title>SmartSeating 席替え名人 - 安全対策版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -15,192 +15,198 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col justify-between">
 
-  <!-- Header Section -->
-  <header class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white px-6 py-3 shadow-md flex justify-between items-center sticky top-0 z-40">
-    <div class="flex items-center space-x-3">
-      <div class="bg-white/20 p-2 rounded-xl">
-        <i class="fa-solid fa-chair text-xl"></i>
+  <div>
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white px-6 py-3 shadow-md flex justify-between items-center sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white/20 p-2 rounded-xl">
+          <i class="fa-solid fa-chair text-xl"></i>
+        </div>
+        <div class="flex items-center space-x-2">
+          <h1 class="font-bold text-lg tracking-wide">SmartSeating</h1>
+          <span class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-medium">席替え名人プレミアム</span>
+        </div>
       </div>
       <div class="flex items-center space-x-2">
-        <h1 class="font-bold text-lg tracking-wide">SmartSeating</h1>
-        <span class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-medium">席替え名人プレミアム</span>
-      </div>
-    </div>
-    <div class="flex items-center space-x-2">
-      <button onclick="resetAll()" class="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
-        <i class="fa-solid fa-rotate-left"></i>
-        <span>全リセット</span>
-      </button>
-      <button onclick="startLotteryPresentation()" class="bg-amber-400 hover:bg-amber-500 text-indigo-950 font-bold text-xs px-4 py-2 rounded-lg shadow-lg transition flex items-center space-x-1.5 animate-bounce">
-        <i class="fa-solid fa-dice text-sm"></i>
-        <span>🎲 くじ引き演出で席替え！</span>
-      </button>
-      <button onclick="runShuffle(false)" class="bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-md transition flex items-center space-x-1">
-        <i class="fa-solid fa-bolt"></i>
-        <span>一括配置</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Main Grid Layout -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-    <!-- Left Column: Navigation & Panels (5 cols) -->
-    <div class="lg:col-span-5 space-y-5">
-
-      <!-- Navigation Tabs -->
-      <div class="bg-white rounded-xl p-1.5 shadow-sm border border-slate-200 flex space-x-1 text-xs font-bold text-slate-500">
-        <button id="tabBtnLayout" onclick="switchTab('layout')" class="flex-1 py-2 px-3 rounded-lg bg-indigo-50 text-indigo-600 shadow-sm flex items-center justify-center space-x-1.5 transition">
-          <i class="fa-solid fa-table-cells"></i>
-          <span>1. レイアウト設定</span>
+        <button onclick="startLotteryPresentation()" class="bg-amber-400 hover:bg-amber-500 text-indigo-950 font-bold text-xs px-4 py-2 rounded-lg shadow-lg transition flex items-center space-x-1.5 animate-bounce">
+          <i class="fa-solid fa-dice text-sm"></i>
+          <span>🎲 くじ引き演出で席替え！</span>
         </button>
-        <button id="tabBtnMember" onclick="switchTab('member')" class="flex-1 py-2 px-3 rounded-lg text-slate-400 hover:text-slate-600 flex items-center justify-center space-x-1.5 transition">
-          <i class="fa-solid fa-users"></i>
-          <span>2. メンバー・固定席</span>
+        <button onclick="runShuffle(false)" class="bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-md transition flex items-center space-x-1">
+          <i class="fa-solid fa-bolt"></i>
+          <span>一括配置</span>
         </button>
       </div>
+    </header>
 
-      <!-- PANEL 1: Layout Settings -->
-      <div id="panelLayout" class="space-y-5">
-        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
-          <div class="flex items-center space-x-2 text-slate-800 font-bold text-sm border-b border-slate-100 pb-2">
-            <i class="fa-solid fa-sliders text-indigo-600"></i>
-            <span>教室レイアウト ＆ 教卓位置</span>
-          </div>
+    <!-- Main Grid Layout -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          <!-- Desk Position Toggle -->
-          <div>
-            <label class="block font-bold text-xs text-slate-600 mb-1.5">教卓（黒板）の位置</label>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <button id="deskPosTop" onclick="setDeskPosition('top')" class="p-2.5 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center justify-center space-x-1.5">
-                <i class="fa-solid fa-arrow-up"></i>
-                <span>上側が前（通常）</span>
-              </button>
-              <button id="deskPosBottom" onclick="setDeskPosition('bottom')" class="p-2.5 border border-slate-200 text-slate-500 font-bold rounded-xl flex items-center justify-center space-x-1.5 hover:bg-slate-50">
-                <i class="fa-solid fa-arrow-down"></i>
-                <span>下側が前（児童視点）</span>
-              </button>
+      <!-- Left Column: Navigation & Panels (5 cols) -->
+      <div class="lg:col-span-5 space-y-5">
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-xl p-1.5 shadow-sm border border-slate-200 flex space-x-1 text-xs font-bold text-slate-500">
+          <button id="tabBtnLayout" onclick="switchTab('layout')" class="flex-1 py-2 px-3 rounded-lg bg-indigo-50 text-indigo-600 shadow-sm flex items-center justify-center space-x-1.5 transition">
+            <i class="fa-solid fa-table-cells"></i>
+            <span>1. レイアウト設定</span>
+          </button>
+          <button id="tabBtnMember" onclick="switchTab('member')" class="flex-1 py-2 px-3 rounded-lg text-slate-400 hover:text-slate-600 flex items-center justify-center space-x-1.5 transition">
+            <i class="fa-solid fa-users"></i>
+            <span>2. メンバー・固定席</span>
+          </button>
+        </div>
+
+        <!-- PANEL 1: Layout Settings -->
+        <div id="panelLayout" class="space-y-5">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+            <div class="flex items-center space-x-2 text-slate-800 font-bold text-sm border-b border-slate-100 pb-2">
+              <i class="fa-solid fa-sliders text-indigo-600"></i>
+              <span>教室レイアウト ＆ 教卓位置</span>
             </div>
-          </div>
 
-          <!-- Rows / Cols -->
-          <div class="grid grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-100">
+            <!-- Desk Position Toggle -->
             <div>
-              <label class="block font-bold text-slate-600 mb-1">行数（縦）</label>
-              <select id="selectRows" onchange="updateGridDimensions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700">
-                <option value="4">4 行</option>
-                <option value="5" selected>5 行</option>
-                <option value="6">6 行</option>
-              </select>
+              <label class="block font-bold text-xs text-slate-600 mb-1.5">教卓（黒板）の位置</label>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <button id="deskPosTop" onclick="setDeskPosition('top')" class="p-2.5 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 font-bold rounded-xl flex items-center justify-center space-x-1.5">
+                  <i class="fa-solid fa-arrow-up"></i>
+                  <span>上側が前（通常）</span>
+                </button>
+                <button id="deskPosBottom" onclick="setDeskPosition('bottom')" class="p-2.5 border border-slate-200 text-slate-500 font-bold rounded-xl flex items-center justify-center space-x-1.5 hover:bg-slate-50">
+                  <i class="fa-solid fa-arrow-down"></i>
+                  <span>下側が前（児童視点）</span>
+                </button>
+              </div>
             </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">列数（横）</label>
-              <select id="selectCols" onchange="updateGridDimensions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700">
-                <option value="4">4 列</option>
-                <option value="5">5 列</option>
-                <option value="6" selected>6 列</option>
-              </select>
+
+            <!-- Rows / Cols -->
+            <div class="grid grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-100">
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">行数（縦）</label>
+                <select id="selectRows" onchange="updateGridDimensions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700">
+                  <option value="4">4 行</option>
+                  <option value="5" selected>5 行</option>
+                  <option value="6">6 行</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">列数（横）</label>
+                <select id="selectCols" onchange="updateGridDimensions()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700">
+                  <option value="4">4 列</option>
+                  <option value="5">5 列</option>
+                  <option value="6" selected>6 列</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- PANEL 2: Members & Conditions -->
-      <div id="panelMember" class="space-y-5 hidden">
-        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
-          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-            <div class="flex items-center space-x-2">
-              <i class="fa-solid fa-user-plus text-indigo-600"></i>
-              <h2 class="font-bold text-slate-800 text-sm">メンバーリスト</h2>
+        <!-- PANEL 2: Members & Conditions -->
+        <div id="panelMember" class="space-y-5 hidden">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-user-plus text-indigo-600"></i>
+                <h2 class="font-bold text-slate-800 text-sm">メンバーリスト</h2>
+              </div>
+              <span id="memberCountBadge" class="bg-indigo-100 text-indigo-700 font-bold text-xs px-3 py-1 rounded-full">
+                0名
+              </span>
             </div>
-            <span id="memberCountBadge" class="bg-indigo-100 text-indigo-700 font-bold text-xs px-3 py-1 rounded-full">
-              0名
-            </span>
+
+            <!-- Bulk Import -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">
+                名前一括登録（「名前 [男/女]」の形式）
+              </label>
+              <textarea id="bulkInput" rows="4" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-slate-700" placeholder="相沢 拓海 男&#10;伊藤 葵 女&#10;井上 健太 男&#10;遠藤 桜 女"></textarea>
+              <button onclick="applyBulkImport()" class="w-full mt-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-xl transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-right-left"></i>
+                <span>名簿に反映する</span>
+              </button>
+            </div>
+
+            <!-- Member List -->
+            <div id="memberList" class="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
           </div>
 
-          <!-- Bulk Import -->
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1">
-              名前一括登録（「名前 [男/女]」の形式）
+          <!-- Gender Options Card -->
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-2">
+            <div class="flex items-center space-x-2 text-slate-800 font-bold text-xs border-b border-slate-100 pb-2">
+              <i class="fa-solid fa-users-between-lines text-indigo-600"></i>
+              <span>配置ルール設定</span>
+            </div>
+            <label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-700 font-bold p-1 hover:bg-slate-50 rounded-lg">
+              <input type="checkbox" id="chkGenderAlternate" checked class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+              <span>男女がなるべく隣り合わないようにする（男女交互）</span>
             </label>
-            <textarea id="bulkInput" rows="4" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-slate-700" placeholder="相沢 拓海 男&#10;伊藤 葵 女&#10;井上 健太 男&#10;遠藤 桜 女"></textarea>
-            <button onclick="applyBulkImport()" class="w-full mt-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-xl transition flex items-center justify-center space-x-2">
-              <i class="fa-solid fa-right-left"></i>
-              <span>名簿に反映する</span>
-            </button>
           </div>
-
-          <!-- Member List -->
-          <div id="memberList" class="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
         </div>
 
-        <!-- Gender Options Card -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-2">
-          <div class="flex items-center space-x-2 text-slate-800 font-bold text-xs border-b border-slate-100 pb-2">
-            <i class="fa-solid fa-users-between-lines text-indigo-600"></i>
-            <span>配置ルール設定</span>
-          </div>
-          <label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-700 font-bold p-1 hover:bg-slate-50 rounded-lg">
-            <input type="checkbox" id="chkGenderAlternate" checked class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
-            <span>男女がなるべく隣り合わないようにする（男女交互）</span>
-          </label>
-        </div>
       </div>
 
-    </div>
+      <!-- Right Column: Seat Canvas (7 cols) -->
+      <div id="canvasContainer" class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between space-y-6 relative overflow-hidden">
 
-    <!-- Right Column: Seat Canvas (7 cols) -->
-    <div id="canvasContainer" class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between space-y-6 relative overflow-hidden">
-
-      <div>
-        <!-- Legend and Dimension -->
-        <div class="flex justify-between items-center mb-6 text-xs text-slate-500 font-medium">
-          <div class="flex items-center space-x-4">
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-3 rounded-sm border border-slate-300 bg-white inline-block"></span>
-              <span>通常席</span>
-            </span>
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-3 rounded-sm border border-amber-400 bg-amber-100 inline-block"></span>
-              <span>事前固定</span>
-            </span>
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-3 rounded-sm bg-slate-300 inline-block"></span>
-              <span>使用不可</span>
-            </span>
+        <div>
+          <!-- Legend and Dimension -->
+          <div class="flex justify-between items-center mb-6 text-xs text-slate-500 font-medium">
+            <div class="flex items-center space-x-4">
+              <span class="flex items-center space-x-1.5">
+                <span class="w-3 h-3 rounded-sm border border-slate-300 bg-white inline-block"></span>
+                <span>通常席</span>
+              </span>
+              <span class="flex items-center space-x-1.5">
+                <span class="w-3 h-3 rounded-sm border border-amber-400 bg-amber-100 inline-block"></span>
+                <span>事前固定</span>
+              </span>
+              <span class="flex items-center space-x-1.5">
+                <span class="w-3 h-3 rounded-sm bg-slate-300 inline-block"></span>
+                <span>使用不可</span>
+              </span>
+            </div>
+            <div id="dimensionDisplay" class="font-bold text-slate-700">5行 × 6列</div>
           </div>
-          <div id="dimensionDisplay" class="font-bold text-slate-700">5行 × 6列</div>
+
+          <!-- Teacher Desk (Top View) -->
+          <div id="teacherDeskTop" class="mb-6 text-center">
+            <div class="inline-flex items-center space-x-2 bg-slate-800 text-white font-bold text-xs px-8 py-2 rounded-xl shadow-sm">
+              <i class="fa-solid fa-chalkboard"></i>
+              <span>教 卓（黒板側）</span>
+            </div>
+          </div>
+
+          <!-- Seats Grid -->
+          <div id="seatsGrid" class="grid gap-3"></div>
+
+          <!-- Teacher Desk (Bottom View) -->
+          <div id="teacherDeskBottom" class="mt-6 text-center hidden">
+            <div class="inline-flex items-center space-x-2 bg-slate-800 text-white font-bold text-xs px-8 py-2 rounded-xl shadow-sm">
+              <i class="fa-solid fa-chalkboard"></i>
+              <span>教 卓（黒板側）</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Teacher Desk (Top View) -->
-        <div id="teacherDeskTop" class="mb-6 text-center">
-          <div class="inline-flex items-center space-x-2 bg-slate-800 text-white font-bold text-xs px-8 py-2 rounded-xl shadow-sm">
-            <i class="fa-solid fa-chalkboard"></i>
-            <span>教 卓（黒板側）</span>
-          </div>
+        <div class="text-right text-xs text-slate-400 font-medium">
+          ※ カード右上の ⚙️ アイコンから個別に「事前固定」や「使用不可」に設定できます
         </div>
 
-        <!-- Seats Grid -->
-        <div id="seatsGrid" class="grid gap-3"></div>
-
-        <!-- Teacher Desk (Bottom View) -->
-        <div id="teacherDeskBottom" class="mt-6 text-center hidden">
-          <div class="inline-flex items-center space-x-2 bg-slate-800 text-white font-bold text-xs px-8 py-2 rounded-xl shadow-sm">
-            <i class="fa-solid fa-chalkboard"></i>
-            <span>教 卓（黒板側）</span>
-          </div>
-        </div>
       </div>
 
-      <div class="text-right text-xs text-slate-400 font-medium">
-        ※ カード右上の ⚙️ アイコンから個別に「事前固定」や「使用不可」に設定できます
-      </div>
+    </main>
+  </div>
 
-    </div>
-
-  </main>
+  <!-- Safety Bottom Reset Footer Area -->
+  <footer class="mt-12 py-6 border-t border-slate-200 bg-slate-100/80 text-center">
+    <button onclick="confirmResetAll()" class="bg-slate-200 hover:bg-rose-100 text-slate-500 hover:text-rose-600 border border-slate-300 hover:border-rose-300 text-xs font-bold px-4 py-2 rounded-xl transition inline-flex items-center space-x-2">
+      <i class="fa-solid fa-trash-can"></i>
+      <span>全データを初期化（リセット）する</span>
+    </button>
+  </footer>
 
   <!-- Seat Modal for Direct Assignment -->
   <div id="seatModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -452,12 +458,10 @@
       renderGrid();
     }
 
-    // 男女交互・隣り合い防止ロジック付きシャッフル
     function computeShuffle() {
       seatMap = new Array(rows * cols).fill(null);
       const isGenderAlt = document.getElementById('chkGenderAlternate').checked;
 
-      // 1. 固定席を先に配置
       let assignedMemberIds = [];
       Object.keys(fixedAssignments).forEach(seatIdx => {
         if (!disabledSeats[seatIdx]) {
@@ -470,14 +474,12 @@
         }
       });
 
-      // 残りの出席メンバー
       let remainingBoys = members.filter(m => m.present && m.gender === '男' && !assignedMemberIds.includes(m.id));
       let remainingGirls = members.filter(m => m.present && m.gender === '女' && !assignedMemberIds.includes(m.id));
 
       shuffleArray(remainingBoys);
       shuffleArray(remainingGirls);
 
-      // 空席（使用不可でない場所）を取得
       let availableIndices = [];
       for (let i = 0; i < seatMap.length; i++) {
         if (!disabledSeats[i] && seatMap[i] === null) {
@@ -486,7 +488,6 @@
       }
 
       if (isGenderAlt) {
-        // チェッカーボード（格子状）属性で席を分類
         let groupA = [];
         let groupB = [];
 
@@ -503,7 +504,6 @@
         shuffleArray(groupA);
         shuffleArray(groupB);
 
-        // Aグループに男子、Bグループに女子を優先配置（逆も考慮）
         if (remainingBoys.length <= groupA.length && remainingGirls.length <= groupB.length) {
           remainingBoys.forEach(b => seatMap[groupA.pop()] = b);
           remainingGirls.forEach(g => seatMap[groupB.pop()] = g);
@@ -512,7 +512,6 @@
           remainingGirls.forEach(g => seatMap[groupA.pop()] = g);
         }
 
-        // 入りきらなかった分を残った席に配置
         let leftoverMembers = [...remainingBoys, ...remainingGirls].filter(m => !Object.values(seatMap).includes(m));
         let leftoverSeats = [...groupA, ...groupB];
         shuffleArray(leftoverMembers);
@@ -524,7 +523,6 @@
           }
         });
       } else {
-        // 通常ランダム配置
         let remainingAll = [...remainingBoys, ...remainingGirls];
         shuffleArray(remainingAll);
         shuffleArray(availableIndices);
@@ -636,11 +634,15 @@
       renderMemberList();
     }
 
-    function resetAll() {
-      fixedAssignments = {};
-      disabledSeats = {};
-      seatMap = new Array(rows * cols).fill(null);
-      renderGrid();
+    // 安全確認ダイアログ付きリセット
+    function confirmResetAll() {
+      if (confirm('【注意】名簿や事前固定、配置データがすべて初期化されます。本当にリセットしてもよろしいですか？')) {
+        fixedAssignments = {};
+        disabledSeats = {};
+        seatMap = new Array(rows * cols).fill(null);
+        renderGrid();
+        alert('データを初期化しました。');
+      }
     }
 
     window.onload = () => {
