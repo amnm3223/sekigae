@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartSeating 席替え名人 - 使用不可席機能付き</title>
+  <title>SmartSeating 席替え名人 - 男女交互・使用不可対応</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -133,7 +133,19 @@
           </div>
 
           <!-- Member List -->
-          <div id="memberList" class="max-h-52 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
+          <div id="memberList" class="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
+        </div>
+
+        <!-- Gender Options Card -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-2">
+          <div class="flex items-center space-x-2 text-slate-800 font-bold text-xs border-b border-slate-100 pb-2">
+            <i class="fa-solid fa-users-between-lines text-indigo-600"></i>
+            <span>配置ルール設定</span>
+          </div>
+          <label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-700 font-bold p-1 hover:bg-slate-50 rounded-lg">
+            <input type="checkbox" id="chkGenderAlternate" checked class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+            <span>男女がなるべく隣り合わないようにする（男女交互）</span>
+          </label>
         </div>
       </div>
 
@@ -201,7 +213,6 @@
       <p class="text-slate-500">この席の状態を設定してください：</p>
 
       <div class="space-y-3">
-        <!-- Disabled Toggle Button -->
         <button id="modalBtnToggleDisabled" onclick="toggleSeatDisabledState()" class="w-full p-2.5 rounded-xl border border-slate-200 font-bold text-center flex items-center justify-center space-x-2 transition">
           <i class="fa-solid fa-ban"></i>
           <span id="modalBtnDisabledText">この席を使用不可にする</span>
@@ -210,7 +221,6 @@
         <div id="modalMemberSelectArea">
           <label class="block font-bold text-slate-600 mb-1">または特定児童を固定予約：</label>
           <select id="modalStudentSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <!-- JSで選択肢生成 -->
           </select>
         </div>
       </div>
@@ -235,8 +245,8 @@
     let rows = 5;
     let cols = 6;
     let deskPosition = 'top';
-    let fixedAssignments = {}; // seatIndex -> memberId
-    let disabledSeats = {};     // seatIndex -> true/false
+    let fixedAssignments = {};
+    let disabledSeats = {};
     let seatMap = [];
     let selectedSeatIndex = null;
 
@@ -442,10 +452,12 @@
       renderGrid();
     }
 
+    // 男女交互・隣り合い防止ロジック付きシャッフル
     function computeShuffle() {
       seatMap = new Array(rows * cols).fill(null);
+      const isGenderAlt = document.getElementById('chkGenderAlternate').checked;
 
-      // 1. 固定席を配置
+      // 1. 固定席を先に配置
       let assignedMemberIds = [];
       Object.keys(fixedAssignments).forEach(seatIdx => {
         if (!disabledSeats[seatIdx]) {
@@ -458,18 +470,77 @@
         }
       });
 
-      // 2. 残り児童をランダムシャッフル
-      let remaining = members.filter(m => m.present && !assignedMemberIds.includes(m.id));
-      for (let i = remaining.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+      // 残りの出席メンバー
+      let remainingBoys = members.filter(m => m.present && m.gender === '男' && !assignedMemberIds.includes(m.id));
+      let remainingGirls = members.filter(m => m.present && m.gender === '女' && !assignedMemberIds.includes(m.id));
+
+      shuffleArray(remainingBoys);
+      shuffleArray(remainingGirls);
+
+      // 空席（使用不可でない場所）を取得
+      let availableIndices = [];
+      for (let i = 0; i < seatMap.length; i++) {
+        if (!disabledSeats[i] && seatMap[i] === null) {
+          availableIndices.push(i);
+        }
       }
 
-      // 3. 使用不可以外の空き席に配置
-      for (let i = 0; i < seatMap.length; i++) {
-        if (!disabledSeats[i] && seatMap[i] === null && remaining.length > 0) {
-          seatMap[i] = remaining.pop();
+      if (isGenderAlt) {
+        // チェッカーボード（格子状）属性で席を分類
+        let groupA = [];
+        let groupB = [];
+
+        availableIndices.forEach(idx => {
+          let r = Math.floor(idx / cols);
+          let c = idx % cols;
+          if ((r + c) % 2 === 0) {
+            groupA.push(idx);
+          } else {
+            groupB.push(idx);
+          }
+        });
+
+        shuffleArray(groupA);
+        shuffleArray(groupB);
+
+        // Aグループに男子、Bグループに女子を優先配置（逆も考慮）
+        if (remainingBoys.length <= groupA.length && remainingGirls.length <= groupB.length) {
+          remainingBoys.forEach(b => seatMap[groupA.pop()] = b);
+          remainingGirls.forEach(g => seatMap[groupB.pop()] = g);
+        } else {
+          remainingBoys.forEach(b => seatMap[groupB.pop()] = b);
+          remainingGirls.forEach(g => seatMap[groupA.pop()] = g);
         }
+
+        // 入りきらなかった分を残った席に配置
+        let leftoverMembers = [...remainingBoys, ...remainingGirls].filter(m => !Object.values(seatMap).includes(m));
+        let leftoverSeats = [...groupA, ...groupB];
+        shuffleArray(leftoverMembers);
+        shuffleArray(leftoverSeats);
+
+        leftoverMembers.forEach(m => {
+          if (leftoverSeats.length > 0) {
+            seatMap[leftoverSeats.pop()] = m;
+          }
+        });
+      } else {
+        // 通常ランダム配置
+        let remainingAll = [...remainingBoys, ...remainingGirls];
+        shuffleArray(remainingAll);
+        shuffleArray(availableIndices);
+
+        remainingAll.forEach(m => {
+          if (availableIndices.length > 0) {
+            seatMap[availableIndices.pop()] = m;
+          }
+        });
+      }
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
       }
     }
 
