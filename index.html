@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartSeating 席替え名人 - 演出付き</title>
+  <title>SmartSeating 席替え名人 - 使用不可席機能付き</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -13,20 +13,6 @@
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    
-    /* カードフリップ演出 */
-    .flip-card { perspective: 1000px; }
-    .flip-card-inner {
-      transition: transform 0.6s;
-      transform-style: preserve-3d;
-    }
-    .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
-    .flip-card-front, .flip-card-back {
-      backface-visibility: hidden;
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-    }
-    .flip-card-back { transform: rotateY(180deg); }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -168,6 +154,10 @@
               <span class="w-3 h-3 rounded-sm border border-amber-400 bg-amber-100 inline-block"></span>
               <span>事前固定</span>
             </span>
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-3 rounded-sm bg-slate-300 inline-block"></span>
+              <span>使用不可</span>
+            </span>
           </div>
           <div id="dimensionDisplay" class="font-bold text-slate-700">5行 × 6列</div>
         </div>
@@ -193,7 +183,7 @@
       </div>
 
       <div class="text-right text-xs text-slate-400 font-medium">
-        ※ カード右上の ⚙️ アイコンを押すと、特定の児童をその席に事前固定できます
+        ※ カード右上の ⚙️ アイコンから個別に「事前固定」や「使用不可」に設定できます
       </div>
 
     </div>
@@ -208,14 +198,25 @@
         <button onclick="closeSeatModal()" class="text-slate-400 hover:text-slate-600 text-lg">×</button>
       </div>
 
-      <p class="text-slate-500">この席に事前固定する児童を選択してください：</p>
+      <p class="text-slate-500">この席の状態を設定してください：</p>
 
-      <select id="modalStudentSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <!-- JSで選択肢生成 -->
-      </select>
+      <div class="space-y-3">
+        <!-- Disabled Toggle Button -->
+        <button id="modalBtnToggleDisabled" onclick="toggleSeatDisabledState()" class="w-full p-2.5 rounded-xl border border-slate-200 font-bold text-center flex items-center justify-center space-x-2 transition">
+          <i class="fa-solid fa-ban"></i>
+          <span id="modalBtnDisabledText">この席を使用不可にする</span>
+        </button>
+
+        <div id="modalMemberSelectArea">
+          <label class="block font-bold text-slate-600 mb-1">または特定児童を固定予約：</label>
+          <select id="modalStudentSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- JSで選択肢生成 -->
+          </select>
+        </div>
+      </div>
 
       <div class="flex justify-between items-center pt-3 border-t border-slate-100">
-        <button onclick="clearFixedSeat()" class="text-red-500 hover:text-red-700 font-bold">固定を解除</button>
+        <button onclick="clearFixedSeat()" class="text-red-500 hover:text-red-700 font-bold">設定をクリア</button>
         <button onclick="saveFixedSeat()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl">決定</button>
       </div>
     </div>
@@ -233,8 +234,9 @@
 
     let rows = 5;
     let cols = 6;
-    let deskPosition = 'top'; // 'top' or 'bottom'
+    let deskPosition = 'top';
     let fixedAssignments = {}; // seatIndex -> memberId
+    let disabledSeats = {};     // seatIndex -> true/false
     let seatMap = [];
     let selectedSeatIndex = null;
 
@@ -319,11 +321,22 @@
           const assignedMember = seatMap[index];
           const fixedMemberId = fixedAssignments[index];
           const fixedMember = members.find(m => m.id === fixedMemberId);
+          const isDisabled = disabledSeats[index];
 
           const card = document.createElement('div');
           const label = `${r + 1}-${c + 1}`;
 
-          if (assignedMember) {
+          if (isDisabled) {
+            card.className = "bg-slate-200 border-2 border-slate-300 rounded-xl p-2.5 h-20 flex flex-col justify-between relative opacity-70";
+            card.innerHTML = `
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                <span>${label}</span>
+                <i onclick="openSeatModal(${index})" class="fa-solid fa-gear text-slate-500 cursor-pointer"></i>
+              </div>
+              <div class="font-bold text-xs text-slate-500 text-center font-kiwi">使用不可</div>
+              <div class="text-[9px] text-center text-slate-400">🚫 対象外</div>
+            `;
+          } else if (assignedMember) {
             const isFixed = fixedMemberId === assignedMember.id;
             card.className = `border-2 rounded-xl p-2.5 h-20 flex flex-col justify-between relative shadow-sm transition ${isFixed ? 'bg-amber-50/80 border-amber-400' : 'bg-indigo-50/50 border-indigo-300'}`;
             card.innerHTML = `
@@ -361,12 +374,25 @@
       }
     }
 
-    // 特定の席の固定ダイアログ
     function openSeatModal(index) {
       selectedSeatIndex = index;
       const r = Math.floor(index / cols) + 1;
       const c = (index % cols) + 1;
-      document.getElementById('modalSeatTitle').innerText = `席 ${r}行 - ${c}列 の事前指定`;
+      document.getElementById('modalSeatTitle').innerText = `席 ${r}行 - ${c}列 の設定`;
+
+      const btnDisabled = document.getElementById('modalBtnToggleDisabled');
+      const btnDisabledText = document.getElementById('modalBtnDisabledText');
+      const selectArea = document.getElementById('modalMemberSelectArea');
+
+      if (disabledSeats[index]) {
+        btnDisabled.className = "w-full p-2.5 rounded-xl bg-red-100 border border-red-300 text-red-700 font-bold text-center flex items-center justify-center space-x-2 transition";
+        btnDisabledText.innerText = "この席の使用不可を解除する";
+        selectArea.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        btnDisabled.className = "w-full p-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-center flex items-center justify-center space-x-2 hover:bg-slate-50 transition";
+        btnDisabledText.innerText = "この席を使用不可にする";
+        selectArea.classList.remove('opacity-40', 'pointer-events-none');
+      }
 
       const select = document.getElementById('modalStudentSelect');
       select.innerHTML = '<option value="">(指定なし - 通常シャッフル)</option>';
@@ -382,16 +408,28 @@
       document.getElementById('seatModal').classList.remove('hidden');
     }
 
+    function toggleSeatDisabledState() {
+      if (disabledSeats[selectedSeatIndex]) {
+        delete disabledSeats[selectedSeatIndex];
+      } else {
+        disabledSeats[selectedSeatIndex] = true;
+        delete fixedAssignments[selectedSeatIndex];
+      }
+      openSeatModal(selectedSeatIndex);
+    }
+
     function closeSeatModal() {
       document.getElementById('seatModal').classList.add('hidden');
     }
 
     function saveFixedSeat() {
-      const val = document.getElementById('modalStudentSelect').value;
-      if (val) {
-        fixedAssignments[selectedSeatIndex] = parseInt(val);
-      } else {
-        delete fixedAssignments[selectedSeatIndex];
+      if (!disabledSeats[selectedSeatIndex]) {
+        const val = document.getElementById('modalStudentSelect').value;
+        if (val) {
+          fixedAssignments[selectedSeatIndex] = parseInt(val);
+        } else {
+          delete fixedAssignments[selectedSeatIndex];
+        }
       }
       closeSeatModal();
       renderGrid();
@@ -399,35 +437,37 @@
 
     function clearFixedSeat() {
       delete fixedAssignments[selectedSeatIndex];
+      delete disabledSeats[selectedSeatIndex];
       closeSeatModal();
       renderGrid();
     }
 
-    // シャッフル配置（内部処理）
     function computeShuffle() {
       seatMap = new Array(rows * cols).fill(null);
 
-      // 1. 固定席をまず埋める
+      // 1. 固定席を配置
       let assignedMemberIds = [];
       Object.keys(fixedAssignments).forEach(seatIdx => {
-        const mId = fixedAssignments[seatIdx];
-        const member = members.find(m => m.id === mId && m.present);
-        if (member) {
-          seatMap[seatIdx] = member;
-          assignedMemberIds.push(member.id);
+        if (!disabledSeats[seatIdx]) {
+          const mId = fixedAssignments[seatIdx];
+          const member = members.find(m => m.id === mId && m.present);
+          if (member) {
+            seatMap[seatIdx] = member;
+            assignedMemberIds.push(member.id);
+          }
         }
       });
 
-      // 2. 余ったメンバーをランダムシャッフル
+      // 2. 残り児童をランダムシャッフル
       let remaining = members.filter(m => m.present && !assignedMemberIds.includes(m.id));
       for (let i = remaining.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
       }
 
-      // 3. 空いている席に配置
+      // 3. 使用不可以外の空き席に配置
       for (let i = 0; i < seatMap.length; i++) {
-        if (seatMap[i] === null && remaining.length > 0) {
+        if (!disabledSeats[i] && seatMap[i] === null && remaining.length > 0) {
           seatMap[i] = remaining.pop();
         }
       }
@@ -438,7 +478,6 @@
       renderGrid();
     }
 
-    // 🎲 くじ引き演出モード
     function startLotteryPresentation() {
       computeShuffle();
 
@@ -450,19 +489,29 @@
         for (let c = 0; c < cols; c++) {
           const index = r * cols + c;
           const assignedMember = seatMap[index];
+          const isDisabled = disabledSeats[index];
           const label = `${r + 1}-${c + 1}`;
 
           const card = document.createElement('div');
-          card.className = "h-20 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl p-2 flex flex-col justify-between items-center text-white shadow-md cursor-pointer hover:scale-105 transition duration-300";
-          card.id = `lottery-card-${index}`;
 
-          card.innerHTML = `
-            <span class="text-[10px] opacity-70 font-mono">${label}</span>
-            <span class="font-extrabold text-lg text-amber-300">❓</span>
-            <span class="text-[9px] opacity-80">めくる</span>
-          `;
+          if (isDisabled) {
+            card.className = "h-20 bg-slate-200 border-2 border-slate-300 rounded-xl p-2 flex flex-col justify-between items-center text-slate-400 opacity-60";
+            card.innerHTML = `
+              <span class="text-[10px] font-mono">${label}</span>
+              <span class="font-bold text-xs">使用不可</span>
+              <span class="text-[9px]">🚫 対象外</span>
+            `;
+          } else {
+            card.className = "h-20 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl p-2 flex flex-col justify-between items-center text-white shadow-md cursor-pointer hover:scale-105 transition duration-300";
+            card.id = `lottery-card-${index}`;
+            card.innerHTML = `
+              <span class="text-[10px] opacity-70 font-mono">${label}</span>
+              <span class="font-extrabold text-lg text-amber-300">❓</span>
+              <span class="text-[9px] opacity-80">めくる</span>
+            `;
+            card.onclick = () => revealCard(index, assignedMember);
+          }
 
-          card.onclick = () => revealCard(index, assignedMember);
           grid.appendChild(card);
         }
       }
@@ -518,6 +567,7 @@
 
     function resetAll() {
       fixedAssignments = {};
+      disabledSeats = {};
       seatMap = new Array(rows * cols).fill(null);
       renderGrid();
     }
