@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartSeating 席替え名人 - 安全対策版</title>
+  <title>SmartSeating 席替え名人 - 自動保存版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -123,11 +122,14 @@
               <label class="block text-xs font-bold text-slate-500 mb-1">
                 名前一括登録（「名前 [男/女]」の形式）
               </label>
-              <textarea id="bulkInput" rows="4" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-slate-700" placeholder="相沢 拓海 男&#10;伊藤 葵 女&#10;井上 健太 男&#10;遠藤 桜 女"></textarea>
-              <button onclick="applyBulkImport()" class="w-full mt-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-xl transition flex items-center justify-center space-x-2">
-                <i class="fa-solid fa-right-left"></i>
-                <span>名簿に反映する</span>
-              </button>
+              <textarea id="bulkInput" oninput="saveDraftText()" rows="4" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-slate-700" placeholder="相沢 拓海 男&#10;伊藤 葵 女&#10;井上 健太 男&#10;遠藤 桜 女"></textarea>
+              
+              <div class="flex space-x-2 mt-2">
+                <button onclick="applyBulkImport()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm">
+                  <i class="fa-solid fa-right-left"></i>
+                  <span>名簿に反映して自動保存</span>
+                </button>
+              </div>
             </div>
 
             <!-- Member List -->
@@ -141,7 +143,7 @@
               <span>配置ルール設定</span>
             </div>
             <label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-700 font-bold p-1 hover:bg-slate-50 rounded-lg">
-              <input type="checkbox" id="chkGenderAlternate" checked class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+              <input type="checkbox" id="chkGenderAlternate" checked onchange="saveToStorage()" class="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4">
               <span>男女がなるべく隣り合わないようにする（男女交互）</span>
             </label>
           </div>
@@ -240,6 +242,8 @@
   </div>
 
   <script>
+    const STORAGE_KEY = 'smart_seating_saved_data';
+
     let members = [
       { id: 1, name: "相沢 拓海", gender: "男", present: true },
       { id: 2, name: "伊藤 葵", gender: "女", present: true },
@@ -256,6 +260,52 @@
     let disabledSeats = {};
     let seatMap = [];
     let selectedSeatIndex = null;
+
+    // ローカルストレージに保存
+    function saveToStorage() {
+      const dataToSave = {
+        members: members,
+        rows: rows,
+        cols: cols,
+        deskPosition: deskPosition,
+        fixedAssignments: fixedAssignments,
+        disabledSeats: disabledSeats,
+        bulkInputText: document.getElementById('bulkInput').value,
+        chkGenderAlternate: document.getElementById('chkGenderAlternate').checked
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    }
+
+    // テキストの下書き自動保存
+    function saveDraftText() {
+      saveToStorage();
+    }
+
+    // ローカルストレージから読み込み
+    function loadFromStorage() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (data.members) members = data.members;
+          if (data.rows) rows = data.rows;
+          if (data.cols) cols = data.cols;
+          if (data.deskPosition) deskPosition = data.deskPosition;
+          if (data.fixedAssignments) fixedAssignments = data.fixedAssignments;
+          if (data.disabledSeats) disabledSeats = data.disabledSeats;
+          if (data.bulkInputText !== undefined) document.getElementById('bulkInput').value = data.bulkInputText;
+          if (data.chkGenderAlternate !== undefined) document.getElementById('chkGenderAlternate').checked = data.chkGenderAlternate;
+
+          document.getElementById('selectRows').value = rows;
+          document.getElementById('selectCols').value = cols;
+          setDeskPosition(deskPosition);
+        } catch (e) {
+          console.error("Failed to load saved data", e);
+        }
+      } else {
+        document.getElementById('bulkInput').value = "相沢 拓海 男\n伊藤 葵 女\n井上 健太 男\n遠藤 桜 女\n太田 翼 男\n金子 結衣 女";
+      }
+    }
 
     function switchTab(tab) {
       const btnLayout = document.getElementById('tabBtnLayout');
@@ -294,6 +344,7 @@
         deskBottom.classList.remove('hidden');
         deskTop.classList.add('hidden');
       }
+      saveToStorage();
     }
 
     function updateGridDimensions() {
@@ -302,6 +353,7 @@
       document.getElementById('dimensionDisplay').innerText = `${rows}行 × ${cols}列`;
       seatMap = new Array(rows * cols).fill(null);
       renderGrid();
+      saveToStorage();
     }
 
     function renderMemberList() {
@@ -450,6 +502,7 @@
       }
       closeSeatModal();
       renderGrid();
+      saveToStorage();
     }
 
     function clearFixedSeat() {
@@ -457,6 +510,7 @@
       delete disabledSeats[selectedSeatIndex];
       closeSeatModal();
       renderGrid();
+      saveToStorage();
     }
 
     function computeShuffle() {
@@ -546,6 +600,7 @@
     function runShuffle(isPresentation = false) {
       computeShuffle();
       renderGrid();
+      saveToStorage();
     }
 
     function startLotteryPresentation() {
@@ -585,6 +640,7 @@
           grid.appendChild(card);
         }
       }
+      saveToStorage();
     }
 
     function revealCard(index, member) {
@@ -626,28 +682,26 @@
         fixedAssignments = {};
         renderMemberList();
         renderGrid();
-        alert(`${members.length}名のメンバーを反映しました！`);
+        saveToStorage();
+        alert(`${members.length}名のメンバーを保存・反映しました！次回以降も自動で残ります。`);
       }
     }
 
     function togglePresent(idx) {
       members[idx].present = !members[idx].present;
       renderMemberList();
+      saveToStorage();
     }
 
-    // 安全確認ダイアログ付きリセット
     function confirmResetAll() {
-      if (confirm('【注意】名簿や事前固定、配置データがすべて初期化されます。本当にリセットしてもよろしいですか？')) {
-        fixedAssignments = {};
-        disabledSeats = {};
-        seatMap = new Array(rows * cols).fill(null);
-        renderGrid();
-        alert('データを初期化しました。');
+      if (confirm('【確認】保存されている名簿データ、事前固定、レイアウト設定をすべて初期化しますか？')) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
       }
     }
 
     window.onload = () => {
-      document.getElementById('bulkInput').value = "相沢 拓海 男\n伊藤 葵 女\n井上 健太 男\n遠藤 桜 女\n太田 翼 男\n金子 結衣 女";
+      loadFromStorage();
       seatMap = new Array(rows * cols).fill(null);
       renderMemberList();
       renderGrid();
